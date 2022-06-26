@@ -5,9 +5,6 @@
 #include "com_log.h"
 #include "cronoapd.h"
 
-#include <baidu/feed/mlarch/babylon/lite/concurrent/vector.h>
-
-
 #undef DCHECK_IS_ON
 
 #include <random>
@@ -19,8 +16,6 @@
 
 DEFINE_int32(ops_per_thread, 10000, "ops_per_thread");
 DEFINE_int32(times, 10, "bench times");
-
-using ::baidu::feed::mlarch::babylon::ConcurrentVector;
 
 int intRand(const int & min, const int & max) {
     static thread_local std::mt19937 generator;

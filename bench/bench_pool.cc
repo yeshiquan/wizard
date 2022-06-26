@@ -5,8 +5,6 @@
 #include "com_log.h"
 #include "cronoapd.h"
 
-#include <baidu/feed/mlarch/babylon/pool.h>
-
 #undef DCHECK_IS_ON
 
 #include <random>
@@ -168,7 +166,6 @@ void bench_babylon_pool(std::string name, int concurrent) {
     int ops_each_time = FLAGS_ops_per_thread * concurrent;
     // bench一次
     auto benchFn = [&]() -> uint64_t {
-        using Pool = baidu::feed::mlarch::babylon::ObjectPool<Foobar>;
         Pool pool(FLAGS_ops_per_thread, 7, 1000);
         std::mutex _mutex;
         auto initFn = [] {};
@@ -196,8 +193,6 @@ int32_t run_bench() {
         bench_babylon_pool("babylon_pool", concurrent);
         bench_my_pool("my_pool", concurrent);
         bench_my_pool_acc("my_pool_acc", concurrent);
-
-        using baidu::feed::mlarch::babylon::ObjectPool;
 
         bench_babylon_pool_batch<ObjectPool<Foobar>>("babylon_pool_batch relea", concurrent, true);
         bench_my_pool_batch<rcu::ObjectPool<Foobar, false, 7>>("my_pool_batch relea", concurrent, true);

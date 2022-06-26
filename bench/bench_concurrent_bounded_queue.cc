@@ -55,8 +55,6 @@
 #include "bench_common.h"
 #include "concurrent/concurrent_bounded_queue.h"
 
-#include <baidu/feed/mlarch/babylon/lite/concurrent/bounded_queue.h>
-
 #include "concurrent/concurrentqueue.h"
 
 DEFINE_int32(ops_per_thread, 100000, "ops_per_thread");
@@ -124,8 +122,6 @@ void bench_babylon_enqueue(std::string name, int concurrent) {
     int ops_each_time = FLAGS_ops_per_thread * concurrent;
     // bench一次
     auto benchFn = [&]() -> uint64_t {
-        using ::baidu::feed::mlarch::babylon::ConcurrentBoundedQueue;
-        using ::baidu::feed::mlarch::babylon::ConcurrentBoundedQueueOption::ConcurrentBoundedQueueOption;
         using rcu::FutexInterface;
         using Queue = ConcurrentBoundedQueue<int, FutexInterface, ConcurrentBoundedQueueOption::CACHELINE_ALIGNED>;
         Queue q(FLAGS_ops_per_thread*concurrent);

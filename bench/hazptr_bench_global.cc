@@ -9,9 +9,6 @@
 
 #include "hazptr_bench.h"
 
-#include <baidu/feed/mlarch/babylon/async_file_appender.h>
-using ::baidu::feed::mlarch::babylon::AsyncFileAppender;
-
 int main(int argc, char** argv) {
     google::ParseCommandLineFlags(&argc, &argv, true);
 

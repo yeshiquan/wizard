@@ -13,13 +13,9 @@
 #include "com_log.h"
 //#include "cronoapd.h"
 
-#include <baidu/feed/mlarch/babylon/async_file_appender.h>
-
 DEFINE_int32(threads, 1, "option.");
 DEFINE_int32(n, 1000, "n");
 DEFINE_int32(option, 0, "option");
-
-using ::baidu::feed::mlarch::babylon::AsyncFileAppender;
 
 int intRand(const int & min, const int & max) {
     //static thread_local std::mt19937 generator;

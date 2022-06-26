@@ -4,8 +4,6 @@
 #include <chrono>
 #include <random>
 
-#include <baidu/feed/mlarch/babylon/pool.h>
-
 #define  DCHECK_IS_ON
 #define POOL_STATS true
 
@@ -83,7 +81,6 @@ TEST_F(PoolTest, test_thread_cache) {
 }
 
 TEST_F(PoolTest, test_babylon_pool) {
-    using ::baidu::feed::mlarch::babylon::ObjectPool;
     size_t num = 20;
     size_t reserve_global = 7;
     size_t cache_per_thread = 3;
