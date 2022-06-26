@@ -1,0 +1,81 @@
+#edit-mode: -*- python -*-
+#coding:gbk
+
+WORKROOT('../../../')
+
+#gcc version, default 'gcc'
+COMPILER('gcc82') 
+IDLFLAGS('--compack')
+
+#Preprocessor flags.
+CPPFLAGS(r'-std=c++17 -D_GNU_SOURCE -D__STDC_LIMIT_MACROS')
+
+CONFIGS('baidu/feed-mlarch/babylon@stable')
+CONFIGS("baidu/base/configure@stable")
+#CONFIGS("baidu/duer/vertical-common@stable")
+CONFIGS('third-64/gtest@gtest_V1.7.2.0_GCC820_4U3_K3_GEN_PD_BL')
+CONFIGS('public/comlogext/cronoapd@cronoapd_1-0-1-0_PD_BL')
+
+
+#C flags.
+CFLAGS('-g -pipe -W -Wall -O1 -fPIC -fopenmp')
+
+#C++ flags.
+CXXFLAGS('-g -pipe -W -Werror=return-type -Wall -O3 -fPIC -std=c++17 -fopenmp -Wno-error=misleading-indentation')
+
+#perf_flags=' -O1 -lasan -fPIC -fsanitize=address -fno-omit-frame-pointer -fsanitize-recover=address'
+#perf_ld_flags=' -lasan'
+#CXXFLAGS('-g -pipe -W -Werror=return-type -Wall -fPIC -std=c++17 -fopenmp -Wno-error=misleading-indentation' + perf_flags)
+#LDFLAGS('-lpthread -lssl -lz -lcrypto -lrt -rdynamic -ldl -lgomp -lbfd -liberty -lopcodes -Wl,-rpath=/opt/compiler/gcc-8.2/lib:/lib64:/lib ' + perf_ld_flags)
+
+OUTPUT('urcu/lib', '$OUT')
+
+HEADERS('src/*.h*', '$INC')
+HEADERS("src/concurrent/*.h",     "$INC/concurrent")
+HEADERS("hazptr/*.h",     "$INC")
+
+#-I path
+#INCPATHS('./src ./hazptr ./bench ./urcu/include')
+INCPATHS('./src ./hazptr ./bench')
+
+#LDFLAGS('-lpthread -lssl -latomic -lz -lcrypto -lrt -rdynamic -ldl -lgomp -lbfd -lstdc++fs -liberty -lopcodes -Wl,-rpath=/opt/compiler/gcc-8.2/lib:/lib64:/lib')
+LDFLAGS('-lpthread -lssl -lz -lcrypto -lcrypt -lrt -rdynamic -ldl -lgomp -lbfd -liberty -lopcodes -Wl,-rpath=/opt/compiler/gcc-8.2/lib:/lib64:/lib')
+
+libsources = GLOB(
+    'src/*.cc ' +
+    'src/*/*.cc ' +
+    'hazptr/*.cpp ' +
+    'src/*.c ' +
+	''
+)
+
+#Application('main', Sources(libsources, GLOB('main/main.cc')), Libs(src_libs=["urcu/lib/liburcu.a"]))
+#Application('test', Sources(libsources, GLOB('main/test.c')), Libs(src_libs=["urcu/lib/liburcu.a"]))
+#Application('route_rcu', Sources(libsources, GLOB('main/route_rcu.c')), Libs(src_libs=["urcu/lib/liburcu.a"]))
+#Application('route_refcnt', Sources(libsources, GLOB('main/route_refcnt.c')), Libs(src_libs=["urcu/lib/liburcu.a"]))
+#Application('route_hazptr', Sources(libsources, GLOB('main/route_hazptr.c')), Libs(src_libs=["urcu/lib/liburcu.a"]))
+#Application('route_seqlock', Sources(libsources, GLOB('main/route_seqlock.c')), Libs(src_libs=["urcu/lib/liburcu.a"]))
+#
+#Application('queue', Sources(libsources, GLOB('main/queue_main.cc')))
+#UTApplication('test_queue', Sources(libsources, GLOB('unittest/queue_test.cc')))
+
+#Application('test_thread', Sources(libsources, GLOB('main/test_thread.cc')))
+#Aplication('lock_free_queue', Sources(libsources, GLOB('main/lock_free_queue_main.cc')))
+#UTApplication('test_lock_free_queue', Sources(libsources, GLOB('unittest/lock_free_queue_test.cc')))
+#UTApplication('test_hazptr_folly', Sources(libsources, GLOB('unittest/hazptr_folly_test.cc')))
+#
+#UTApplication('test_hazptr', Sources(libsources, GLOB('unittest/hazptr_test.cc')))
+#Application('bench_hazptr_thread_local', Sources(libsources, GLOB('bench/hazptr_bench_thread_local.cc')))
+#Application('bench_hazptr_global', Sources(libsources, GLOB('bench/hazptr_bench_global.cc')))
+#UTApplication('test_hazptr_swmr_list', Sources(libsources, GLOB('unittest/hazptr_swmr_list_test.cc')))
+#UTApplication('test_concurrent_hashtable', Sources(libsources, GLOB('unittest/my_hashtable_test.cc')))
+#UTApplication('test_folly_concurrent_hashtable', Sources(libsources, GLOB('unittest/folly_concurrent_hashmap_test.cc')))
+#UTApplication('test_concurrent_vector', Sources(libsources, GLOB('unittest/test_concurrent_vector.cc')))
+#Application('bench_concurrent_vector', Sources(libsources, GLOB('bench/bench_concurrent_vector.cc')))
+#UTApplication('test_pool', Sources(libsources, GLOB('unittest/test_pool.cc')))
+#Application('bench_pool', Sources(libsources, GLOB('bench/bench_pool.cc')))
+UTApplication('test_concurrent_bounded_queue', Sources(libsources, GLOB('unittest/test_concurrent_bounded_queue.cc')))
+Application('bench_concurrent_bounded_queue', Sources(libsources, GLOB('bench/bench_concurrent_bounded_queue.cc')))
+
+#Application('stack', Sources(libsources, GLOB('main/stack_main.cc')))
+#UTApplication('test_stack', Sources(libsources, GLOB('unittest/stack_test.cc')))

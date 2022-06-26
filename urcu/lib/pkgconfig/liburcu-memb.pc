@@ -1,0 +1,11 @@
+prefix=/home/work/urcu
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: Userspace RCU membarrier syscall
+Description: A userspace RCU (read-copy-update) library, membarrier syscall version
+Version: 0.13.0
+Requires:
+Libs: -L${libdir} -lurcu-common -lurcu-memb
+Cflags: -I${includedir}
