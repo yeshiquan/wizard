@@ -10,10 +10,6 @@ IDLFLAGS('--compack')
 #Preprocessor flags.
 CPPFLAGS(r'-std=c++17 -D_GNU_SOURCE -D__STDC_LIMIT_MACROS')
 
-CONFIGS("baidu/base/configure@stable")
-CONFIGS('third-64/gtest@gtest_V1.7.2.0_GCC820_4U3_K3_GEN_PD_BL')
-CONFIGS('public/comlogext/cronoapd@cronoapd_1-0-1-0_PD_BL')
-
 
 #C flags.
 CFLAGS('-g -pipe -W -Wall -O1 -fPIC -fopenmp')
