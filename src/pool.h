@@ -7,12 +7,8 @@
 #include "debug.h"
 //#include "concurrent/vector.h"
 
-#include <baidu/feed/mlarch/babylon/concurrent/vector.h>
-
 constexpr size_t CACHELINE_SIZE = 64;
 namespace rcu {
-
-using baidu::feed::mlarch::babylon::ConcurrentVector;
 
 #ifndef DEFAULT_POOL_NUM
 #define DEFAULT_POOL_NUM 1000
