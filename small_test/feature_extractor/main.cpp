@@ -102,8 +102,9 @@ class FoobarOperator : public SimpleOperator<std::string&, const int32_t*, const
 	int32_t generate(std::string& result, const int32_t* age, const std::string* name) const override {
         std::cout << "age:" << age << " name:" << name << std::endl;
         result = ("age:" + std::to_string(*age) + " name:" + *name);
-		return 0;
-	}
+	return 0;
+}
+	
 };
 
 int main() {
