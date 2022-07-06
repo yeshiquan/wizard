@@ -52,12 +52,8 @@ public:
 		return &_value;	
 	}
 	template<typename T>
-	void ref(const T& v) {
-        _value.ref(v);
-	}
-	template<typename T>
-	void assign(const T& v) {
-        _value = v;
+	void assign(T&& v) {
+        _value = std::forward<T>(v);
     }
 private:
 	duer::Any _value;
@@ -120,7 +116,7 @@ int main() {
 	Feature* f1 = new Feature;
 	f1->assign(age);
 	Feature* f2 = new Feature;
-	f2->ref(name);
+	f2->assign(name);
 
 	Dependencies dependencies;
 	dependencies.add_feature(f1);
