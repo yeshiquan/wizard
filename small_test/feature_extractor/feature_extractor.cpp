@@ -10,41 +10,41 @@
 typename ::std::remove_cv<typename ::std::remove_reference<V>::type>::type
 
 // 引用的情况下得到本体，指针则得到nullptr的type用于默认值
-#define DEPEND_DEFAULT_TYPE(index) \
+#define DEPEND_DEFAULT_TYPE(T) \
 typename ::std::remove_cv<typename ::std::conditional< \
-            ::std::is_lvalue_reference<D##index>::value, \
-            typename ::std::remove_reference<D##index>::type, \
+            ::std::is_lvalue_reference<T>::value, \
+            typename ::std::remove_reference<T>::type, \
             ::std::nullptr_t>::type>::type
 
 // 去除引用或指针得到本体
-#define DEPEND_REAL_TYPE(index) \
+#define DEPEND_REAL_TYPE(T) \
 typename ::std::remove_cv<typename ::std::conditional< \
-            ::std::is_lvalue_reference<D##index>::value, \
-            typename ::std::remove_reference<D##index>::type, \
-            typename ::std::remove_pointer<D##index>::type>::type>::type
+            ::std::is_lvalue_reference<T>::value, \
+            typename ::std::remove_reference<T>::type, \
+            typename ::std::remove_pointer<T>::type>::type>::type
 
 // 得到依赖类型的指针，T& -> T*，T* -> T**，为了后续可以统一通过*转回
-#define DEPEND_POINTER_TYPE(index) \
-typename ::std::conditional<::std::is_lvalue_reference<D##index>::value, \
-    DEPEND_REAL_TYPE(index)*, \
-    DEPEND_REAL_TYPE(index)**>::type
+#define DEPEND_POINTER_TYPE(T) \
+typename ::std::conditional<::std::is_lvalue_reference<T>::value, \
+    DEPEND_REAL_TYPE(T)*, \
+    DEPEND_REAL_TYPE(T)**>::type
     
 
 #define DECLARE_DEPENDENCIE(index) \
     const duer::Any* a##index = dependencies.get(index); \
     std::cout << "index:" << index << " any:" << a##index << std::endl; \
-    const DEPEND_REAL_TYPE(index)* prd##index = nullptr; \
-    prd##index = a##index->get<DEPEND_REAL_TYPE(index)>(); \
+    const DEPEND_REAL_TYPE(D##index)* prd##index = nullptr; \
+    prd##index = a##index->get<DEPEND_REAL_TYPE(D##index)>(); \
     if (prd##index == nullptr) { \
         printf("get depend %d value of type[%s] as %s failed\n", \
             index, \
             a##index->instance_type().c_str(), \
-            duer::StaticTypeId<DEPEND_REAL_TYPE(index)>::TYPE_NAME.c_str()); \
+            duer::StaticTypeId<DEPEND_REAL_TYPE(D##index)>::TYPE_NAME.c_str()); \
         return -1; \
     } \
-    DEPEND_POINTER_TYPE(index) pd##index = std::is_lvalue_reference<D##index>::value ? \
-            (DEPEND_POINTER_TYPE(index))prd##index :     \
-            (DEPEND_POINTER_TYPE(index))&prd##index ;    
+    DEPEND_POINTER_TYPE(D##index) pd##index = std::is_lvalue_reference<D##index>::value ? \
+            (DEPEND_POINTER_TYPE(D##index))prd##index :     \
+            (DEPEND_POINTER_TYPE(D##index))&prd##index ;    
 
 class Feature {
 public:
@@ -89,8 +89,8 @@ protected:
 template<typename V, typename D0, typename D1>
 class SimpleOperator : public SimpleOperatorBase<
     VALUE_REAL_TYPE,
-    DEPEND_DEFAULT_TYPE(0), 
-    DEPEND_DEFAULT_TYPE(1)> {
+    DEPEND_DEFAULT_TYPE(D0), 
+    DEPEND_DEFAULT_TYPE(D1)> {
 public:
     virtual int32_t gen(V& value, const Dependencies& dependencies) const {
         DECLARE_DEPENDENCIE(0);
@@ -115,7 +115,7 @@ int main() {
     Feature* f1 = new Feature;
     f1->assign(age);
     Feature* f2 = new Feature;
-    f2->assign(name);
+    f2->assign(std::move(name));
 
     Dependencies dependencies;
     dependencies.add_feature(f1);
