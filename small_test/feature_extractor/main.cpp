@@ -31,13 +31,20 @@ typename ::std::conditional<::std::is_lvalue_reference<D##index>::value, \
 	
 
 #define DECLARE_DEPENDENCIE(index) \
-	const duer::Any* a##index = dependencies.get(index); \
+    const duer::Any* a##index = dependencies.get(index); \
     std::cout << "index:" << index << " any:" << a##index << std::endl; \
-	const DEPEND_REAL_TYPE(index)* prd##index = nullptr; \
-	prd##index = a##index->get<DEPEND_REAL_TYPE(index)>(); \
-	DEPEND_POINTER_TYPE(index) pd##index = std::is_lvalue_reference<D##index>::value ? \
-			(DEPEND_POINTER_TYPE(index))prd##index :	 \
-			(DEPEND_POINTER_TYPE(index))&prd##index ;	
+    const DEPEND_REAL_TYPE(index)* prd##index = nullptr; \
+    prd##index = a##index->get<DEPEND_REAL_TYPE(index)>(); \
+    if (prd##index == nullptr) { \
+        printf("get depend %d value of type[%s] as %s failed\n", \
+            index, \
+            a##index->instance_type().c_str(), \
+            duer::StaticTypeId<DEPEND_REAL_TYPE(index)>::TYPE_NAME.c_str()); \
+        return -1; \
+    } \
+    DEPEND_POINTER_TYPE(index) pd##index = std::is_lvalue_reference<D##index>::value ? \
+            (DEPEND_POINTER_TYPE(index))prd##index :     \
+            (DEPEND_POINTER_TYPE(index))&prd##index ;	
 
 class Feature {
 public:
