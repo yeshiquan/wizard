@@ -6,7 +6,7 @@
 namespace duer {
 
 template<class T>
-class TypeId {
+class StaticTypeId {
 public:
     static const ::std::string TYPE_NAME;
     static const char* name() {
@@ -15,7 +15,7 @@ public:
 };
 
 template<class T>
-const ::std::string TypeId<T>::TYPE_NAME = TypeId<T>::name();
+const ::std::string StaticTypeId<T>::TYPE_NAME = StaticTypeId<T>::name();
 
 class Any final {
 public:
@@ -30,7 +30,7 @@ public:
     Any() :
         _empty(true),
         _type(Type::INSTANCE),
-        _instanse_type(&TypeId<::std::nullptr_t>::TYPE_NAME),
+        _instanse_type(&StaticTypeId<::std::nullptr_t>::TYPE_NAME),
         _ref(nullptr),
         _const_ref(true) {}
 
@@ -59,8 +59,8 @@ public:
     Any(T&& value) :
         _empty(false),
         _type(Type::INSTANCE),
-        _instanse_type(&TypeId<typename ::std::remove_reference<T>::type>::TYPE_NAME),
-        _holder(new InstanseHolter<T>(::std::forward<T>(value))),
+        _instanse_type(&StaticTypeId<typename ::std::remove_reference<T>::type>::TYPE_NAME),
+        _holder(new InstanseHolter<typename ::std::remove_reference<T>::type>(::std::move(value))),
         _ref(_holder->get()),
         _primitive_value(),
         _const_ref(false) {}
@@ -95,9 +95,9 @@ public:
     Any& operator=(T&& value) {
         _empty = false;
         _type = Type::INSTANCE;
-        _instanse_type = &TypeId<T>::TYPE_NAME;
+        _instanse_type = &StaticTypeId<T>::TYPE_NAME;
         std::cout << "Any operator= _instanse_type:" << *_instanse_type << std::endl;
-        _holder.reset(new InstanseHolter<T>(::std::forward<T>(value)));
+        _holder.reset(new InstanseHolter<typename ::std::remove_reference<T>::type>(::std::move(value)));
         _ref = _holder->get();
         std::cout << "_ref:" << _ref << std::endl;
         _primitive_value = 0;
@@ -109,7 +109,7 @@ public:
     Any& ref(const T& value) {
         _empty = false;
         _type = Type::INSTANCE;
-        _instanse_type = &TypeId<T>::TYPE_NAME;
+        _instanse_type = &StaticTypeId<T>::TYPE_NAME;
         _holder.reset();
         _ref = &value;
         _primitive_value = 0;
@@ -120,29 +120,29 @@ public:
     void clear() {
         _empty = true;
         _type = Type::INSTANCE;
-        _instanse_type = &TypeId<::std::nullptr_t>::TYPE_NAME;
+        _instanse_type = &StaticTypeId<::std::nullptr_t>::TYPE_NAME;
         _holder.reset();
     }
 
     template<typename T>
     T* get() {
-        if (!_const_ref && _instanse_type == &TypeId<T>::TYPE_NAME) {
+        if (!_const_ref && _instanse_type == &StaticTypeId<T>::TYPE_NAME) {
             return reinterpret_cast<T*>(const_cast<void*>(_ref));
         }
-        std::cout << "get nullptr " << (_instanse_type == &TypeId<T>::TYPE_NAME)
+        std::cout << "get nullptr " << (_instanse_type == &StaticTypeId<T>::TYPE_NAME)
                         << " instance_type:###" << *_instanse_type << "###"
-                        << " TYPE_NAME:###" << TypeId<T>::TYPE_NAME << "###" << std::endl;
+                        << " TYPE_NAME:###" << StaticTypeId<T>::TYPE_NAME << "###" << std::endl;
         return nullptr;
     }
 
     template<typename T>
     const T* get() const {
-        if (_instanse_type == &TypeId<T>::TYPE_NAME) {
+        if (_instanse_type == &StaticTypeId<T>::TYPE_NAME) {
             return reinterpret_cast<const T*>(_ref);
         }
-        std::cout << "get nullptr " << (_instanse_type == &TypeId<T>::TYPE_NAME)
+        std::cout << "get nullptr " << (_instanse_type == &StaticTypeId<T>::TYPE_NAME)
                         << " instance_type:###" << *_instanse_type << "###"
-                        << " TYPE_NAME:###" << TypeId<T>::TYPE_NAME << "###" << std::endl;
+                        << " TYPE_NAME:###" << StaticTypeId<T>::TYPE_NAME << "###" << std::endl;
         return nullptr;
     }
 
@@ -173,7 +173,7 @@ private:
     class InstanseHolter : public Holder {
     public:
         InstanseHolter(const T& instance) : _instanse(instance) { }
-        InstanseHolter(T&& instance) : _instanse(::std::forward<T>(instance)) { }
+        InstanseHolter(T&& instance) : _instanse(::std::move(instance)) { }
 
         virtual void* get() {
             return &_instanse;
@@ -186,25 +186,6 @@ private:
     private:
         T _instanse;
     };
-
-    template<typename T>
-    class InstanseHolter<T&> : public Holder {
-    public:
-        InstanseHolter(const T& instance) : _instanse(instance) { }
-        InstanseHolter(T&& instance) : _instanse(::std::forward<T>(instance)) { }
-
-        virtual void* get() {
-            return &_instanse;
-        }
-
-        virtual InstanseHolter* clone() const {
-            return new InstanseHolter(_instanse);
-        }
-
-    private:
-        T _instanse;
-    };
-
 
     bool _empty;
     Type _type;
@@ -234,7 +215,7 @@ template<>
 inline Any& Any::operator=<const int32_t&>(const int32_t& value) {
     _empty = false;
     _type = Type::INT32;
-    _instanse_type = &TypeId<int32_t>::TYPE_NAME;
+    _instanse_type = &StaticTypeId<int32_t>::TYPE_NAME;
     _holder.reset();
     _ref = &_primitive_value;
     _primitive_value.int32_v = value;
