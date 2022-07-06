@@ -31,7 +31,7 @@ public:
         _empty(true),
         _type(Type::INSTANCE),
         _instanse_type(&StaticTypeId<::std::nullptr_t>::TYPE_NAME),
-        _ref(nullptr),
+        _pointer(nullptr),
         _const_ref(true) {}
 
     Any(const Any& other) :
@@ -39,8 +39,8 @@ public:
         _type(other._type),
         _instanse_type(other._instanse_type),
         _holder(other._holder ? other._holder->clone() : nullptr),
-        _ref(_holder ? _holder->get() : 
-            (_type == Type::INSTANCE ? other._ref :
+        _pointer(_holder ? _holder->get() : 
+            (_type == Type::INSTANCE ? other._pointer :
              reinterpret_cast<const void*>(&_primitive_value))),
         _primitive_value(other._primitive_value),
         _const_ref(other._const_ref) {}
@@ -50,7 +50,7 @@ public:
         _type(other._type),
         _instanse_type(other._instanse_type),
         _holder(::std::move(other._holder)),
-        _ref(_type == Type::INSTANCE ? other._ref :
+        _pointer(_type == Type::INSTANCE ? other._pointer :
              reinterpret_cast<const void*>(&_primitive_value)),
         _primitive_value(other._primitive_value),
         _const_ref(other._const_ref) {}
@@ -61,7 +61,7 @@ public:
         _type(Type::INSTANCE),
         _instanse_type(&StaticTypeId<typename ::std::remove_reference<T>::type>::TYPE_NAME),
         _holder(new InstanseHolter<typename ::std::remove_reference<T>::type>(::std::move(value))),
-        _ref(_holder->get()),
+        _pointer(_holder->get()),
         _primitive_value(),
         _const_ref(false) {}
 
@@ -70,8 +70,8 @@ public:
         _type = other._type;
         _instanse_type = other._instanse_type;
         _holder.reset(other._holder ? other._holder->clone() : nullptr);
-        _ref = _holder ? _holder.get() :
-            (_type == Type::INSTANCE ? other._ref :
+        _pointer = _holder ? _holder.get() :
+            (_type == Type::INSTANCE ? other._pointer :
              reinterpret_cast<const void*>(&_primitive_value)),
         _primitive_value = other._primitive_value;
         _const_ref = other._const_ref;
@@ -83,8 +83,8 @@ public:
         _type = other._type;
         _instanse_type = other._instanse_type;
         _holder = ::std::move(other._holder);
-        _ref = _holder ? _holder.get() :
-            (_type == Type::INSTANCE ? other._ref :
+        _pointer = _holder ? _holder.get() :
+            (_type == Type::INSTANCE ? other._pointer :
              reinterpret_cast<const void*>(&_primitive_value)),
         _primitive_value = other._primitive_value;
         _const_ref = other._const_ref;
@@ -98,8 +98,7 @@ public:
         _instanse_type = &StaticTypeId<T>::TYPE_NAME;
         std::cout << "Any operator= _instanse_type:" << *_instanse_type << std::endl;
         _holder.reset(new InstanseHolter<typename ::std::remove_reference<T>::type>(::std::move(value)));
-        _ref = _holder->get();
-        std::cout << "_ref:" << _ref << std::endl;
+        _pointer = _holder->get();
         _primitive_value = 0;
         _const_ref = false;
         return *this;
@@ -111,7 +110,7 @@ public:
         _type = Type::INSTANCE;
         _instanse_type = &StaticTypeId<T>::TYPE_NAME;
         _holder.reset();
-        _ref = &value;
+        _pointer = &value;
         _primitive_value = 0;
         _const_ref = false;
         return *this;
@@ -127,7 +126,7 @@ public:
     template<typename T>
     T* get() {
         if (!_const_ref && _instanse_type == &StaticTypeId<T>::TYPE_NAME) {
-            return reinterpret_cast<T*>(const_cast<void*>(_ref));
+            return reinterpret_cast<T*>(const_cast<void*>(_pointer));
         }
         std::cout << "get nullptr " << (_instanse_type == &StaticTypeId<T>::TYPE_NAME)
                         << " instance_type:###" << *_instanse_type << "###"
@@ -138,7 +137,7 @@ public:
     template<typename T>
     const T* get() const {
         if (_instanse_type == &StaticTypeId<T>::TYPE_NAME) {
-            return reinterpret_cast<const T*>(_ref);
+            return reinterpret_cast<const T*>(_pointer);
         }
         std::cout << "get nullptr " << (_instanse_type == &StaticTypeId<T>::TYPE_NAME)
                         << " instance_type:###" << *_instanse_type << "###"
@@ -191,7 +190,7 @@ private:
     Type _type;
     const ::std::string* _instanse_type;
     ::std::shared_ptr<Holder> _holder;
-    const void* _ref;
+    const void* _pointer = nullptr;
     union PrimitiveValue {
         PrimitiveValue() : int64_v(0) {}
         PrimitiveValue(const PrimitiveValue& other) : int64_v(other.int64_v) {}
@@ -217,7 +216,7 @@ inline Any& Any::operator=<const int32_t&>(const int32_t& value) {
     _type = Type::INT32;
     _instanse_type = &StaticTypeId<int32_t>::TYPE_NAME;
     _holder.reset();
-    _ref = &_primitive_value;
+    _pointer = &_primitive_value;
     _primitive_value.int32_v = value;
     _const_ref = false;
     return *this;
