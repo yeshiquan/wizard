@@ -59,8 +59,8 @@ public:
     Any(T&& value) :
         _empty(false),
         _type(Type::INSTANCE),
-        _instanse_type(&StaticTypeId<typename ::std::remove_reference<T>::type>::TYPE_NAME),
-        _holder(new InstanseHolter<typename ::std::remove_reference<T>::type>(::std::forward<T>(value))),
+        _instanse_type(&StaticTypeId<typename ::std::decay_t<T>>::TYPE_NAME),
+        _holder(new InstanseHolter<typename ::std::decay_t<T>>(::std::forward<T>(value))),
         _pointer(_holder->get()),
         _primitive_value(),
         _const_ref(false) {}
