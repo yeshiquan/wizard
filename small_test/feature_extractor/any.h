@@ -60,47 +60,37 @@ public:
         _empty(false),
         _type(Type::INSTANCE),
         _instanse_type(&StaticTypeId<typename ::std::remove_reference<T>::type>::TYPE_NAME),
-        _holder(new InstanseHolter<typename ::std::remove_reference<T>::type>(::std::move(value))),
+        _holder(new InstanseHolter<typename ::std::remove_reference<T>::type>(::std::forward<T>(value))),
         _pointer(_holder->get()),
         _primitive_value(),
         _const_ref(false) {}
 
+    void swap(Any& rhs) {
+        std::swap(_empty, rhs._empty);
+        std::swap(_type, rhs._type);
+        std::swap(_instanse_type, rhs._instanse_type);
+        std::swap(_holder, rhs._holder);
+        std::swap(_pointer, rhs._pointer);
+        std::swap(_primitive_value, rhs._primitive_value);
+        std::swap(_const_ref, rhs._const_ref);
+    }
+
     Any& operator=(const Any& other) {
-        _empty = other._empty;
-        _type = other._type;
-        _instanse_type = other._instanse_type;
-        _holder.reset(other._holder ? other._holder->clone() : nullptr);
-        _pointer = _holder ? _holder.get() :
-            (_type == Type::INSTANCE ? other._pointer :
-             reinterpret_cast<const void*>(&_primitive_value)),
-        _primitive_value = other._primitive_value;
-        _const_ref = other._const_ref;
+        Any tmp(other);
+        swap(tmp);
         return *this;
     }
 
     Any& operator=(Any&& other) {
-        _empty = other._empty;
-        _type = other._type;
-        _instanse_type = other._instanse_type;
-        _holder = ::std::move(other._holder);
-        _pointer = _holder ? _holder.get() :
-            (_type == Type::INSTANCE ? other._pointer :
-             reinterpret_cast<const void*>(&_primitive_value)),
-        _primitive_value = other._primitive_value;
-        _const_ref = other._const_ref;
+        Any tmp(std::move(other));
+        swap(tmp);
         return *this;
     }
 
     template<typename T>
     Any& operator=(T&& value) {
-        _empty = false;
-        _type = Type::INSTANCE;
-        _instanse_type = &StaticTypeId<T>::TYPE_NAME;
-        std::cout << "Any operator= _instanse_type:" << *_instanse_type << std::endl;
-        _holder.reset(new InstanseHolter<typename ::std::remove_reference<T>::type>(::std::move(value)));
-        _pointer = _holder->get();
-        _primitive_value = 0;
-        _const_ref = false;
+        Any tmp(std::forward<T>(value));
+        swap(tmp);
         return *this;
     }
 
@@ -128,9 +118,6 @@ public:
         if (!_const_ref && _instanse_type == &StaticTypeId<T>::TYPE_NAME) {
             return reinterpret_cast<T*>(const_cast<void*>(_pointer));
         }
-        std::cout << "get nullptr " << (_instanse_type == &StaticTypeId<T>::TYPE_NAME)
-                        << " instance_type:###" << *_instanse_type << "###"
-                        << " TYPE_NAME:###" << StaticTypeId<T>::TYPE_NAME << "###" << std::endl;
         return nullptr;
     }
 
@@ -139,9 +126,6 @@ public:
         if (_instanse_type == &StaticTypeId<T>::TYPE_NAME) {
             return reinterpret_cast<const T*>(_pointer);
         }
-        std::cout << "get nullptr " << (_instanse_type == &StaticTypeId<T>::TYPE_NAME)
-                        << " instance_type:###" << *_instanse_type << "###"
-                        << " TYPE_NAME:###" << StaticTypeId<T>::TYPE_NAME << "###" << std::endl;
         return nullptr;
     }
 
