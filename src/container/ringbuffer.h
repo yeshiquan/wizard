@@ -121,7 +121,6 @@ public:
         capacity_ = rhs.capacity_;
         elements_ = (T*)Allocator().allocate(sizeof(T) * capacity_);
         construct_all();
-        //踩过坑 https://ku.baidu-int.com/knowledge/HFVrC7hq1Q/4qO5dVHe1O/wQfBFdTw5v/tUKeN6-HO4J5Y4
         // std::copy(rhs.elements_, rhs.elements_ + capacity_, elements_); //复现用这个
         std::copy(rhs.elements_, rhs.elements_ + size_, elements_);
     }
