@@ -1,25 +1,26 @@
 #include "timer_task.h"
 #include <iostream>
+#include "logging.h"
 
 
-namespace ai_service::utils {
+namespace base::timer {
 
 TimerTask::TimerTask() noexcept {
     _event_vec.resize(kMaxEvent);
     _task_fd = ::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
     if (_task_fd == -1) {
-        printf("timerfd_create() failed: errno=%d\n", errno);
+        LOGW("timerfd_create() failed: errno=%d", errno);
     }
 
     _epoll_fd = epoll_create(EPOLL_CLOEXEC);
     if (_epoll_fd == -1) {
-        printf("epoll_create() failed: errno=%d\n", errno);
+        LOGW("epoll_create() failed: errno=%d", errno);
     }
 
     _ev.events = EPOLLIN | EPOLLET;
     //_ev.events = EPOLLIN;
     if (::epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _task_fd, &_ev) == -1) {
-        printf("epoll_ctl(ADD) failed: errno=%d\n", errno);
+        LOGW("epoll_ctl(ADD) failed: errno=%d", errno);
     }
 
     _wakeup_fd = _create_event_fd();
@@ -27,13 +28,13 @@ TimerTask::TimerTask() noexcept {
     _ev.events = EPOLLIN | EPOLLET;
     //_ev.events = EPOLLIN;
     if (::epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _wakeup_fd, &_ev) == -1) {
-        printf("epoll_ctl(ADD) failed: errno=%d\n", errno);
+        LOGW("epoll_ctl(ADD) failed: errno=%", errno);
     }
 }
 
 std::shared_ptr<Task> TimerTask::add_task(std::string key, uint32_t interval) noexcept {
     //CHECK(interval > 0);
-    TimePoint now = std::chrono::high_resolution_clock::now();
+    TimePoint now = std::chrono::steady_clock::now();
     TimePoint expired_pt = now + std::chrono::milliseconds(interval);
     return _add_task_internal(key, expired_pt, interval);
 }
@@ -64,13 +65,13 @@ void TimerTask::clear() noexcept {
     _task_map.clear();        
     if (_task_fd > 0) {
         if(epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _task_fd, NULL) != 0){
-            std::cout << "epoll_ctl delete task_fd failed" << std::endl;
+            SLOGW << "epoll_ctl delete task_fd failed";
         }
         close(_task_fd);
     }
     if (_wakeup_fd > 0) {
         if(epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _wakeup_fd, NULL) != 0){
-            std::cout << "epoll_ctl delete wakeup_fd failed" << std::endl;
+            SLOGW << "epoll_ctl delete wakeup_fd failed";
         }
         close(_wakeup_fd);
     } 
@@ -87,21 +88,21 @@ void TimerTask::_wakeup() noexcept {
     uint64_t u = 0x0608; // 值无意义
     auto n = ::write(_wakeup_fd, &u, sizeof(uint64_t));
     if (n != sizeof(uint64_t)) {
-        std::cout << "wakeup failed" << std::endl;
+        SLOGW << "wakeup failed";
     } else {
-        std::cout << "wakeup success" << std::endl;
+        //std::cout << "wakeup success" << std::endl;
     }
 }
 
 void TimerTask::_check_and_run_tasks() noexcept {
     //std::cout << "_check_and_run_tasks...task_size" << _task_map.size() << std::endl;
-    TimePoint now = std::chrono::high_resolution_clock::now();
+    TimePoint now = std::chrono::steady_clock::now();
     std::vector<std::string> to_delete_keys;
-    to_delete_keys.reserve(_task_map.size());
 
     std::lock_guard<std::mutex> guard(_mutex);
+    to_delete_keys.reserve(_task_map.size());
     for (auto& [key, task] : _task_map) {
-        if (now >= task->expired_pt) {
+        if (task->is_ready.load(std::memory_order_acquire) && now >= task->expired_pt) {
             // TODO: 尝试改成异步执行任务
             // 执行任务的过程中如果耗时很长，停止、添加、删除计时器都会被阻塞
             task->run();
@@ -144,14 +145,14 @@ void TimerTask::_poll() noexcept {
     } else {
         if (saved_errno != EINTR) {
             errno = saved_errno;
-            std::cout << "epoll wait error:" << saved_errno << std::endl;
+            SLOGW << "epoll wait error:" << saved_errno;
         }
     }
 }
 
 struct timespec TimerTask::_how_much_time_left(TimePoint expired_pt) noexcept {
     constexpr long kMinGapMilliSeconds = 100;
-    TimePoint now = std::chrono::high_resolution_clock::now();
+    TimePoint now = std::chrono::steady_clock::now();
     auto duration = expired_pt - now;
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
     //std::cout << "ms -> " << ms << std::endl;
@@ -178,17 +179,16 @@ void TimerTask::_setup_a_task(int task_fd, TimePoint expired_pt) noexcept {
 
     int ret = ::timerfd_settime(task_fd, 0, &new_value, &old_value);
     if (ret != 0) {
-        std::cout << "timerfd_settime() failed" 
+        SLOGW << "timerfd_settime() failed" 
                 << " sec:" << new_value.it_value.tv_sec 
-                << " nsec:" << new_value.it_value.tv_nsec 
-                << std::endl;
+                << " nsec:" << new_value.it_value.tv_nsec;    
     }
 }
 
 int TimerTask::_create_event_fd() noexcept {
     int event_fd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
     if (event_fd < 0) {
-        std::cout << "Failed in eventfd()" << std::endl;
+        SLOGW << "Failed in eventfd()";
     }
     return event_fd;
 }
@@ -219,6 +219,6 @@ std::shared_ptr<Task> TimerTask::_add_task_internal(std::string key,
     return task;
 }
 
-uint32_t TimerTask::anonymous_task_id = 1;
+std::atomic<uint32_t> TimerTask::anonymous_task_id = 1;
 
 } // namespace
