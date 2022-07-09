@@ -7,7 +7,7 @@
 #include <memory>
 #include <type_traits>
 
-#include "skiplist-inl.h"
+#include "list-detail.h"
 
 namespace rcu {
 
