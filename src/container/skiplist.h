@@ -47,75 +47,26 @@ public:
 
     void remove(const ValueType& data) {
         std::cout << "remove(" << data << ")" << std::endl;
-        int layer = maxLayer();
+        int layer = height() - 1;
         NodeType* node = head_;
         NodeType* node_next = nullptr;
         NodeType* to_delete_node = nullptr;
         while (layer >= 0) {
             // 双指针：寻找 node < data <= node_next 这样的点
-            while (layer >= 0) {
-                node_next = node->skip(layer);
-                if (node_next != nullptr && greater(data, node_next->data())) {
-                    // 跳过 data > node_next 的层
-                    layer--;
-                } else {
-                    break;
-                }
-            }
-
-            //std::cout << "layer:" << layer << " node:" << node << " node_next:" << node_next << std::endl;
-            if (node_next != nullptr && equal(data, node_next->data())) {
-                node->set_skip(layer, node_next->skip(layer));
-                to_delete_node = node_next;
-            }
-            layer--;
-        }
-        if (to_delete_node) {
-            NodeType::destroy(alloc_, to_delete_node);
-        }
-    }
-
-    bool find(const ValueType& data) {
-        return _find_node_down_right(data);
-    }
-
-
-    bool _find_node_down_right(const ValueType& data) {
-        std::cout << "find(" << data << ")" << std::endl;
-        NodeType* node = head_;
-        int layer = head_->height() - 1;
-        NodeType* node_next = nullptr;
-
-        bool found = false;
-        while (true) {
-            // 双指针：寻找 node < node_next <= data 的节点
-            while (layer >= 0) {
-                node_next = node->skip(layer);
-                if (node_next == nullptr || (node_next != nullptr && greater(node_next->data(), data))) {
-                    // 跳过 node_next > data的层, node_next==nullptr当做无穷大来处理
-                    layer--;
-                } else {
-                    break;
-                }
-            }
-
-            //std::cout << "find() layer:" << layer << " node_next:" << node_next << std::endl;
-            if (layer < 0) {
-                found = false;
-                break;
-            }
-
-            // 双指针：寻找 node < data <= node_next 的节点
-            while (node_next && less(node_next->data(), data)) {
+            node_next = node->skip(layer);
+            while (node_next && greater(data, node_next->data())) {
                 node = node_next;
                 node_next = node_next->skip(layer);
             }
-            if (node_next != nullptr && equal(node_next->data(), data)) {
-                found = true;
-                break;
+            if (node_next && equal(data, node_next->data())) {
+                to_delete_node = node_next;
+                node->set_skip(layer, node_next->skip(layer));
             }
+            layer--;
         }
-        return found;
+        if (to_delete_node != nullptr) {
+            NodeType::destroy(alloc_, to_delete_node);
+        }
     }
 
     bool find_insert_point(NodeType* new_node, const ValueType& data) {
@@ -151,6 +102,10 @@ public:
         }
 
         return is_exist;
+    }    
+
+    bool find(const ValueType& data) {
+        return _find_node_down_right(data);
     }
 
   void print_layer(NodeType* start, int layer) {
@@ -186,6 +141,44 @@ public:
   int height() const { return head_->height(); }
   int maxLayer() const { return height() - 1; }  
 private:
+    bool _find_node_down_right(const ValueType& data) {
+        std::cout << "find(" << data << ")" << std::endl;
+        NodeType* node = head_;
+        int layer = head_->height() - 1;
+        NodeType* node_next = nullptr;
+
+        bool found = false;
+        while (true) {
+            // 双指针：寻找 node < node_next <= data 的节点
+            while (layer >= 0) {
+                node_next = node->skip(layer);
+                if (node_next == nullptr || greater(node_next->data(), data)) {
+                    // 跳过 node_next > data的层, node_next==nullptr当做无穷大来处理
+                    layer--;
+                } else {
+                    break;
+                }
+            }
+
+            //std::cout << "find() layer:" << layer << " node_next:" << node_next << std::endl;
+            if (layer < 0) {
+                found = false;
+                break;
+            }
+
+            // 双指针：寻找 node < data <= node_next 的节点
+            while (node_next && less(node_next->data(), data)) {
+                node = node_next;
+                node_next = node_next->skip(layer);
+            }
+            if (node_next != nullptr && equal(node_next->data(), data)) {
+                found = true;
+                break;
+            }
+        }
+        return found;
+    }
+    
   static bool greater(const ValueType &data1, const ValueType& data2) {
     return Comp()(data2, data1);
   }
