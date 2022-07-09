@@ -85,3 +85,31 @@ TEST_F(SkipListTest, test_basic) {
         ASSERT_EQ(ret, false);
     }
 }
+
+TEST_F(SkipListTest, test_remove) {
+    auto* sl = new rcu::SkipList<int>(8);
+    std::vector<int> elements;
+
+    for (int i = 1; i <= 100; ++i) {
+        elements.emplace_back(i);
+    }
+
+    for (auto e : elements) {
+        bool is_exist = sl->insert(e);
+        ASSERT_EQ(is_exist, false);
+    }
+
+    sl->print();
+
+    auto rng = std::default_random_engine {};
+    std::shuffle(std::begin(elements), std::end(elements), rng);
+    for (auto e : elements) {
+        bool ret = sl->find(e);
+        ASSERT_EQ(ret, true);
+
+        sl->remove(e);
+
+        ret = sl->find(e);
+        ASSERT_EQ(ret, false);
+    }
+}
