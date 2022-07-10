@@ -87,12 +87,17 @@ TEST_F(SkipListTest, test_basic) {
 }
 
 TEST_F(SkipListTest, test_remove) {
-    auto* sl = new rcu::SkipList<int>(8);
+    int N = 200;
+    int init_height = std::log2(100);
+    auto* sl = new rcu::SkipList<int>(init_height);
     std::vector<int> elements;
 
-    for (int i = 1; i <= 100; ++i) {
+    for (int i = 1; i <= N; ++i) {
         elements.emplace_back(i);
     }
+
+    auto rng = std::default_random_engine {};
+    std::shuffle(std::begin(elements), std::end(elements), rng);    
 
     for (auto e : elements) {
         bool is_exist = sl->insert(e);
@@ -101,7 +106,7 @@ TEST_F(SkipListTest, test_remove) {
 
     sl->print();
 
-    auto rng = std::default_random_engine {};
+    rng = std::default_random_engine {};
     std::shuffle(std::begin(elements), std::end(elements), rng);
     for (auto e : elements) {
         bool ret = sl->find(e);
@@ -112,4 +117,33 @@ TEST_F(SkipListTest, test_remove) {
         ret = sl->find(e);
         ASSERT_EQ(ret, false);
     }
+}
+
+TEST_F(SkipListTest, test_grow_height) {
+    int N = 425;
+    int init_height = 2;
+    auto* sl = new rcu::SkipList<int>(init_height);
+    std::vector<int> elements;
+
+    for (int i = 1; i <= N; ++i) {
+        elements.emplace_back(i);
+    }
+
+    auto rng = std::default_random_engine {};
+    std::shuffle(std::begin(elements), std::end(elements), rng);    
+
+    for (auto e : elements) {
+        bool is_exist = sl->insert(e);
+        ASSERT_EQ(is_exist, false);
+    }
+
+    sl->print();
+
+    // 高度增长了
+    std::cout << "height " << init_height << " -> " << sl->height() << std::endl;
+    ASSERT_GT(sl->height(), init_height);
+
+    ASSERT_EQ(sl->size(), N);
+
+    ASSERT_EQ(sl->find(5), true);
 }
