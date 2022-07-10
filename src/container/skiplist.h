@@ -51,13 +51,13 @@ public:
         }        
         int node_height = detail::SkipListRandomHeight::instance().getHeight(height());
         //std::cout<< "insert() node_height:" << node_height << " data:" << data << " list_height:" << height() << std::endl;
-        auto* new_node = NodeType::create(alloc_, node_height, data);
 
         std::vector<NodeType*> prevs(height());
         auto* next_node = _search_equal_or_greater(data, prevs);
         bool is_exist = next_node && next_node->data() == data;
 
         if ((is_exist && is_force_insert) || !is_exist) {
+            auto* new_node = NodeType::create(alloc_, node_height, data);
             for (int layer = node_height - 1; layer >= 0; layer--) {
                 new_node->set_skip(layer, prevs[layer]->skip(layer));
                 prevs[layer]->set_skip(layer, new_node);
