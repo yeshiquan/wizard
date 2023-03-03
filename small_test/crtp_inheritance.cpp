@@ -54,22 +54,28 @@ struct View : public BaseContainer<View<T>> {
 template <class T>
 struct InnerType<View<T>> {
   using reference = T;
+    template<typename Z>
+    using CT = View<Z>;
 };
 
 template <class T>
 struct InnerType<NDArray<T>> {
     using reference = T;
+    template<typename Z>
+    using CT = NDArray<Z>;
 };
 
-// D = NDArray<int> 或者 View<int>
-template<typename D>
+// Derived = NDArray<int> 或者 View<int>
+// 演示CRTP的基类如何获取子类的public type
+template<typename Derived>
 struct BaseContainer {
-  using derived_type = D;
-  using inner_types = InnerType<D>;
+  using derived_type = Derived;
+  using inner_types = InnerType<Derived>;
   using reference = typename inner_types::reference;
 
+  // 如果要获取子类的type，这个写法是很自然的，但是会报错
   // error: invalid use of incomplete type 'struct NDArray<int>'
-  // using reference = typename D::reference;
+  // using reference = typename Derived::reference;
 
   inline const derived_type& self(void) const {
     return *static_cast<const derived_type*>(this);
@@ -89,6 +95,7 @@ struct BaseContainer {
 int main() {
   NDArray<int> arr;
   arr.run();
+
   View<int> view;
   view.run();
 
