@@ -11,9 +11,9 @@ void print_feature(std::string label, Container &arr) {
     std::cout << label << " -> [";
     if (arr.size() > 0) {
         for (int i = 0; i < arr.size() - 1; ++i) {
-            std::cout << arr.at(i) << ",";
+            std::cout << arr[i] << ",";
         }
-        std::cout << arr.at(arr.size() - 1);
+        std::cout << arr[arr.size() - 1];
     }
     std::cout << "] length:" << arr.size() << std::endl;
 }
@@ -105,6 +105,10 @@ public:
         }
         data_.push_back(value);
     }
+    T& operator[](size_t i) {
+        size_t idx = (*idx_)[i];
+        return data_[idx];
+    }
     T& at(size_t i) {
         size_t idx = (*idx_)[i];
         return data_[idx];
@@ -187,6 +191,8 @@ private:
 template<class T>
 std::vector<std::shared_ptr<DataVector<T>>> HeterogeneousVector::items;
 
+// 一种列式存储的Table容器，支持行、列、数据的增删改查
+// 典型应用场景是G侧的正排特征。
 class FeatureTable {
 public:
     FeatureTable() {
@@ -203,7 +209,8 @@ public:
     }
 
     template<typename T>
-    DataVector<T> &create_column(int feature_id) {
+    DataVector<T> &create_column(const std::string& feature_name) {
+        int feature_id = ensure_feature_id(feature_name);
         columns_[feature_id] = std::make_shared<HeterogeneousVector>(feature_id);
         return get_and_init_column<T>(feature_id);
     }
@@ -212,6 +219,30 @@ public:
     DataVector<T> &get_column(int feature_id) {
         return columns_[feature_id]->get_vector<T>();
     }
+
+    template<typename T>
+    DataVector<T> &get_column(const std::string& feature_name) {
+        int feature_id = get_feature_id(feature_name);
+        return columns_[feature_id]->get_vector<T>();
+    }    
+
+    int ensure_feature_id(const std::string &feature_name) {
+        auto iter = name_to_idx_.find(feature_name);
+        if (iter == name_to_idx_.end()) {
+            int new_feature_id = name_to_idx_.size();
+            name_to_idx_.emplace(feature_name, new_feature_id);
+            return new_feature_id;
+        }
+        return iter->second;
+    }
+
+    int get_feature_id(const std::string &feature_name) {
+        auto iter = name_to_idx_.find(feature_name);
+        if (iter == name_to_idx_.end()) {
+            return -1;
+        }
+        return iter->second;
+    }    
 
     template<typename T>
     DataVector<T> &get_and_init_column(int feature_id) {
@@ -226,14 +257,7 @@ public:
 private:
     std::vector<std::shared_ptr<HeterogeneousVector>> columns_;
     IdxListPtr idx_;
-};
-
-enum FeatureId {
-    F_UID,
-    F_CLICK,
-    F_TITLE,
-    F_TAG,
-    FEATURE_SIZE,
+    std::unordered_map<std::string, int> name_to_idx_;
 };
 
 // 自定义的复杂正排数据
@@ -253,23 +277,24 @@ std::ostream& operator<<(std::ostream& os, const FeatureWeightInteger& value) {
 }
 
 int main() {
+    size_t FEATURE_SIZE = 4;
     FeatureTable table(FEATURE_SIZE);
-    auto &f_uid = table.create_column<int>(F_UID);
+    auto &f_uid = table.create_column<int>("f_uid");
     f_uid.push_back(111);
     f_uid.push_back(222);
     f_uid.push_back(333);
 
-    auto &f_click = table.create_column<FeatureWeightInteger>(F_CLICK);
+    auto &f_click = table.create_column<FeatureWeightInteger>("f_click");
     f_click.push_back(FeatureWeightInteger(1901, 1.42));
     f_click.push_back(FeatureWeightInteger(1902, 1.02));
     f_click.push_back(FeatureWeightInteger(1903, 1.24));
 
-    auto &f_title = table.create_column<std::string>(F_TITLE);
+    auto &f_title = table.create_column<std::string>("f_title");
     f_title.push_back(std::string("title1"));
     f_title.push_back(std::string("title2"));
     f_title.push_back(std::string("title3"));
 
-    auto &f_tag = table.create_column<std::string>(F_TAG);
+    auto &f_tag = table.create_column<std::string>("f_tag");
     f_tag.push_back("news");
     f_tag.push_back("video");
     f_tag.push_back("military");
@@ -290,12 +315,13 @@ int main() {
 
     // 删除第0行
     std::cout << "\n------ remove row 0 ------\n" << std::endl;
-    table.remove_row(0);    
+    table.remove_row(0);
 
     print_feature("f_uid", f_uid);
     print_feature("f_click", f_click);
     print_feature("f_title", f_title);
     print_feature("f_tag", f_tag);
+
 
     // 再插入一行数据
     std::cout << "\n------ append row ------\n" << std::endl;
