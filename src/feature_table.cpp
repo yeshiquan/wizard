@@ -19,6 +19,7 @@ void print_feature(std::string label, Container &arr) {
 }
 
 // ================== StaticTypeId Begin ===================
+// 打印C++原生类型名，比官方的typeid可读性更好
 template <typename T> static inline const char *helper1() {
   // Must have the same signature as helper2().
   return __PRETTY_FUNCTION__ + __builtin_strlen(__FUNCTION__);
@@ -109,10 +110,18 @@ public:
         size_t idx = (*idx_)[i];
         return data_[idx];
     }
+    const T& operator[](size_t i) const {
+        size_t idx = (*idx_)[i];
+        return data_[idx];
+    }    
     T& at(size_t i) {
         size_t idx = (*idx_)[i];
         return data_[idx];
     }
+    const T& at(size_t i) const {
+        size_t idx = (*idx_)[i];
+        return data_[idx];
+    }    
     void remove(size_t i) {
         idx_->erase(idx_->begin() + i);
     }
@@ -249,11 +258,23 @@ public:
         return columns_[feature_id]->get_or_create_vector<T>(idx_);
     }
 
+    template<typename T, typename F>
+    void filter(const std::string& feature_name, F&& is_filter) {
+        const DataVector<T> &vec = get_column<T>(feature_name);
+        for (int i = 0; i < vec.size(); ++i) {
+            if (is_filter(vec[i])) {
+                idx_->erase(idx_->begin() + i);
+            }
+        }
+    }
+
     void remove_row(int row) {
         // 所有DataVector共享一份索引数据
         // 删除一行数据变得如此简单、高效
         idx_->erase(idx_->begin() + row);
     }
+
+    size_t row_size() const { return idx_->size(); }
 private:
     std::vector<std::shared_ptr<HeterogeneousVector>> columns_;
     IdxListPtr idx_;
@@ -285,9 +306,9 @@ int main() {
     f_uid.push_back(333);
 
     auto &f_click = table.create_column<FeatureWeightInteger>("f_click");
-    f_click.push_back(FeatureWeightInteger(1901, 1.42));
-    f_click.push_back(FeatureWeightInteger(1902, 1.02));
-    f_click.push_back(FeatureWeightInteger(1903, 1.24));
+    f_click.push_back(FeatureWeightInteger(1901, 1.41));
+    f_click.push_back(FeatureWeightInteger(1902, 1.42));
+    f_click.push_back(FeatureWeightInteger(1903, 1.43));
 
     auto &f_title = table.create_column<std::string>("f_title");
     f_title.push_back(std::string("title1"));
@@ -299,10 +320,22 @@ int main() {
     f_tag.push_back("video");
     f_tag.push_back("military");
 
+    // 按照列打印table
     print_feature("f_uid", f_uid);
     print_feature("f_click", f_click);
     print_feature("f_title", f_title);
     print_feature("f_tag", f_tag);
+
+    // 按照行遍历table
+    std::cout << "\n------ print table by row ------\n" << std::endl;
+    for (int i = 0; i < table.row_size(); ++i) {
+        std::cout << "row " << i << " -> ";
+        std::cout << f_uid[i] << ", ";
+        std::cout << f_click[i] << ", ";
+        std::cout << f_title[i] << ", ";
+        std::cout << f_tag[i];
+        std::cout << std::endl;
+    }
 
     // 删除第1行
     std::cout << "\n------ remove row 1 ------\n" << std::endl;
@@ -322,13 +355,23 @@ int main() {
     print_feature("f_title", f_title);
     print_feature("f_tag", f_tag);
 
-
     // 再插入一行数据
     std::cout << "\n------ append row ------\n" << std::endl;
     f_uid.push_back(444);
-    f_click.push_back(FeatureWeightInteger(1904, 1.24));
+    f_click.push_back(FeatureWeightInteger(1904, 1.44));
     f_title.push_back(std::string("title4"));
     f_tag.push_back("life");
+
+    print_feature("f_uid", f_uid);
+    print_feature("f_click", f_click);
+    print_feature("f_title", f_title);
+    print_feature("f_tag", f_tag);
+
+    // 根据 f_click 过滤数据
+    std::cout << "\n------ filter where f_click.weight < 1.44 ------\n" << std::endl;
+    table.filter<FeatureWeightInteger>("f_click", [](const FeatureWeightInteger &f_click) {
+        return f_click.weight < 1.44;
+    });
 
     print_feature("f_uid", f_uid);
     print_feature("f_click", f_click);
