@@ -7,13 +7,13 @@
 #include <string_view>
 
 template<typename Container>
-void print_feature(std::string label, Container &arr) {
+void print_vector(std::string label, Container &arr) {
     std::cout << label << " -> [";
     if (arr.size() > 0) {
         for (int i = 0; i < arr.size() - 1; ++i) {
             std::cout << arr[i] << ",";
         }
-        std::cout << arr[arr.size() - 1];
+        std::cout << arr.back();
     }
     std::cout << "] length:" << arr.size() << std::endl;
 }
@@ -100,12 +100,24 @@ public:
     void push_back(T value) {
         int new_idx = data_.size();
         //std::cout << "DataVector push_back() new_idx:" << new_idx << std::endl;
-        //print_feature("idx_", *idx_);
+        //print_vector("idx_", *idx_);
         if (idx_->size() == 0 || new_idx > idx_->back()) {
             idx_->push_back(new_idx);
         }
         data_.push_back(value);
     }
+    template<typename ...Args>
+    void emplace_back(Args && ... value) {
+        int new_idx = data_.size();
+        if (idx_->size() == 0 || new_idx > idx_->back()) {
+            idx_->push_back(new_idx);
+        }
+        data_.emplace_back(std::forward<Args>(value)...);
+    }
+    T& front() { return data_[idx_->front()]; }
+    const T& front() const { return data_[idx_->front()]; }    
+    T& back() { return data_[idx_->back()]; }
+    const T& back() const { return data_[idx_->back()]; }
     T& operator[](size_t i) {
         size_t idx = (*idx_)[i];
         return data_[idx];
@@ -121,7 +133,7 @@ public:
     const T& at(size_t i) const {
         size_t idx = (*idx_)[i];
         return data_[idx];
-    }    
+    }
     void remove(size_t i) {
         idx_->erase(idx_->begin() + i);
     }
@@ -212,41 +224,41 @@ public:
     }
 
     template<typename T>
-    void append_column(int feature_id, const T& value) {
-        std::vector<T> &column_data = get_column<T>(feature_id);
+    void append_column(int column_id, const T& value) {
+        std::vector<T> &column_data = get_column<T>(column_id);
         column_data.emplace_back(value);
     }
 
     template<typename T>
-    DataVector<T> &create_column(const std::string& feature_name) {
-        int feature_id = ensure_feature_id(feature_name);
-        columns_[feature_id] = std::make_shared<HeterogeneousVector>(feature_id);
-        return get_and_init_column<T>(feature_id);
+    DataVector<T> &create_column(const std::string& column_name) {
+        int column_id = ensure_column_id(column_name);
+        columns_[column_id] = std::make_shared<HeterogeneousVector>(column_id);
+        return get_and_init_column<T>(column_id);
     }
 
     template<typename T>
-    DataVector<T> &get_column(int feature_id) {
-        return columns_[feature_id]->get_vector<T>();
+    DataVector<T> &get_column(int column_id) {
+        return columns_[column_id]->get_vector<T>();
     }
 
     template<typename T>
-    DataVector<T> &get_column(const std::string& feature_name) {
-        int feature_id = get_feature_id(feature_name);
-        return columns_[feature_id]->get_vector<T>();
+    DataVector<T> &get_column(const std::string& column_name) {
+        int column_id = get_column_id(column_name);
+        return columns_[column_id]->get_vector<T>();
     }    
 
-    int ensure_feature_id(const std::string &feature_name) {
-        auto iter = name_to_idx_.find(feature_name);
+    int ensure_column_id(const std::string &column_name) {
+        auto iter = name_to_idx_.find(column_name);
         if (iter == name_to_idx_.end()) {
-            int new_feature_id = name_to_idx_.size();
-            name_to_idx_.emplace(feature_name, new_feature_id);
-            return new_feature_id;
+            int new_column_id = name_to_idx_.size();
+            name_to_idx_.emplace(column_name, new_column_id);
+            return new_column_id;
         }
         return iter->second;
     }
 
-    int get_feature_id(const std::string &feature_name) {
-        auto iter = name_to_idx_.find(feature_name);
+    int get_column_id(const std::string &column_name) {
+        auto iter = name_to_idx_.find(column_name);
         if (iter == name_to_idx_.end()) {
             return -1;
         }
@@ -254,13 +266,13 @@ public:
     }    
 
     template<typename T>
-    DataVector<T> &get_and_init_column(int feature_id) {
-        return columns_[feature_id]->get_or_create_vector<T>(idx_);
+    DataVector<T> &get_and_init_column(int column_id) {
+        return columns_[column_id]->get_or_create_vector<T>(idx_);
     }
 
     template<typename T, typename F>
-    void filter(const std::string& feature_name, F&& is_filter) {
-        const DataVector<T> &vec = get_column<T>(feature_name);
+    void filter(const std::string& column_name, F&& is_filter) {
+        const DataVector<T> &vec = get_column<T>(column_name);
         for (int i = 0; i < vec.size(); ++i) {
             if (is_filter(vec[i])) {
                 idx_->erase(idx_->begin() + i);
@@ -321,10 +333,11 @@ int main() {
     f_tag.push_back("military");
 
     // 按照列打印table
-    print_feature("f_uid", f_uid);
-    print_feature("f_click", f_click);
-    print_feature("f_title", f_title);
-    print_feature("f_tag", f_tag);
+    std::cout << "------ print table by column ------\n" << std::endl;
+    print_vector("f_uid", f_uid);
+    print_vector("f_click", f_click);
+    print_vector("f_title", f_title);
+    print_vector("f_tag", f_tag);
 
     // 按照行遍历table
     std::cout << "\n------ print table by row ------\n" << std::endl;
@@ -341,19 +354,19 @@ int main() {
     std::cout << "\n------ remove row 1 ------\n" << std::endl;
     table.remove_row(1);
 
-    print_feature("f_uid", f_uid);
-    print_feature("f_click", f_click);
-    print_feature("f_title", f_title);
-    print_feature("f_tag", f_tag);
+    print_vector("f_uid", f_uid);
+    print_vector("f_click", f_click);
+    print_vector("f_title", f_title);
+    print_vector("f_tag", f_tag);
 
     // 删除第0行
     std::cout << "\n------ remove row 0 ------\n" << std::endl;
     table.remove_row(0);
 
-    print_feature("f_uid", f_uid);
-    print_feature("f_click", f_click);
-    print_feature("f_title", f_title);
-    print_feature("f_tag", f_tag);
+    print_vector("f_uid", f_uid);
+    print_vector("f_click", f_click);
+    print_vector("f_title", f_title);
+    print_vector("f_tag", f_tag);
 
     // 再插入一行数据
     std::cout << "\n------ append row ------\n" << std::endl;
@@ -362,10 +375,10 @@ int main() {
     f_title.push_back(std::string("title4"));
     f_tag.push_back("life");
 
-    print_feature("f_uid", f_uid);
-    print_feature("f_click", f_click);
-    print_feature("f_title", f_title);
-    print_feature("f_tag", f_tag);
+    print_vector("f_uid", f_uid);
+    print_vector("f_click", f_click);
+    print_vector("f_title", f_title);
+    print_vector("f_tag", f_tag);
 
     // 根据 f_click 过滤数据
     std::cout << "\n------ filter where f_click.weight < 1.44 ------\n" << std::endl;
@@ -373,10 +386,10 @@ int main() {
         return f_click.weight < 1.44;
     });
 
-    print_feature("f_uid", f_uid);
-    print_feature("f_click", f_click);
-    print_feature("f_title", f_title);
-    print_feature("f_tag", f_tag);
+    print_vector("f_uid", f_uid);
+    print_vector("f_click", f_click);
+    print_vector("f_title", f_title);
+    print_vector("f_tag", f_tag);
 
     return 0;
 }
