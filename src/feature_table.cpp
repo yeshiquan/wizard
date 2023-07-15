@@ -6,6 +6,19 @@
 #include <memory>
 #include <string_view>
 
+template<typename Container>
+void print_feature(std::string label, Container &arr) {
+    std::cout << label << " -> [";
+    if (arr.size() > 0) {
+        for (int i = 0; i < arr.size() - 1; ++i) {
+            std::cout << arr.at(i) << ",";
+        }
+        std::cout << arr.at(arr.size() - 1);
+    }
+    std::cout << "] length:" << arr.size() << std::endl;
+}
+
+// ================== StaticTypeId Begin ===================
 template <typename T> static inline const char *helper1() {
   // Must have the same signature as helper2().
   return __PRETTY_FUNCTION__ + __builtin_strlen(__FUNCTION__);
@@ -27,7 +40,8 @@ public:
 
 template <class T>
 const ::std::string
-    StaticTypeId<T>::TYPE_NAME = std::string(StaticTypeId<T>::name());    
+    StaticTypeId<T>::TYPE_NAME = std::string(StaticTypeId<T>::name());
+// ================== StaticTypeId End ===================
 
 template<typename... Ts>
 struct TypeList {};
@@ -83,8 +97,11 @@ public:
         idx_ = std::move(idx);
     }
     void push_back(T value) {
-        if (idx_->size() <= data_.size()) {
-            idx_->push_back(data_.size());
+        int new_idx = data_.size();
+        //std::cout << "DataVector push_back() new_idx:" << new_idx << std::endl;
+        //print_feature("idx_", *idx_);
+        if (idx_->size() == 0 || new_idx > idx_->back()) {
+            idx_->push_back(new_idx);
         }
         data_.push_back(value);
     }
@@ -164,7 +181,7 @@ public:
 private:
     template<class T>
     static std::vector<std::shared_ptr<DataVector<T>>> items;
-    int id_;
+    int id_ = -1;
 };
 
 template<class T>
@@ -235,15 +252,6 @@ std::ostream& operator<<(std::ostream& os, const FeatureWeightInteger& value) {
     return os;
 }
 
-template<typename Container>
-void print_feature(std::string label, Container &arr) {
-    std::cout << label << " -> [";
-    for (int i = 0; i < arr.size() - 1; ++i) {
-        std::cout << arr.at(i) << ",";
-    }
-    std::cout << arr.at(arr.size() - 1) << "] size:" << arr.size() << std::endl;
-}
-
 int main() {
     FeatureTable table(FEATURE_SIZE);
     auto &f_uid = table.create_column<int>(F_UID);
@@ -287,7 +295,19 @@ int main() {
     print_feature("f_uid", f_uid);
     print_feature("f_click", f_click);
     print_feature("f_title", f_title);
-    print_feature("f_tag", f_tag);    
+    print_feature("f_tag", f_tag);
+
+    // 再插入一行数据
+    std::cout << "\n------ append row ------\n" << std::endl;
+    f_uid.push_back(444);
+    f_click.push_back(FeatureWeightInteger(1904, 1.24));
+    f_title.push_back(std::string("title4"));
+    f_tag.push_back("life");
+
+    print_feature("f_uid", f_uid);
+    print_feature("f_click", f_click);
+    print_feature("f_title", f_title);
+    print_feature("f_tag", f_tag);
 
     return 0;
 }
