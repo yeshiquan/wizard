@@ -241,20 +241,20 @@ void print_feature(std::string label, Container &arr) {
     for (int i = 0; i < arr.size() - 1; ++i) {
         std::cout << arr.at(i) << ",";
     }
-    std::cout << arr.at(arr.size() - 1) << "]" << std::endl;
+    std::cout << arr.at(arr.size() - 1) << "] size:" << arr.size() << std::endl;
 }
 
 int main() {
     FeatureTable table(FEATURE_SIZE);
     auto &f_uid = table.create_column<int>(F_UID);
-    f_uid.push_back(1);
-    f_uid.push_back(2);
-    f_uid.push_back(3);
+    f_uid.push_back(111);
+    f_uid.push_back(222);
+    f_uid.push_back(333);
 
     auto &f_click = table.create_column<FeatureWeightInteger>(F_CLICK);
-    f_click.push_back(FeatureWeightInteger(1984, 1.42));
-    f_click.push_back(FeatureWeightInteger(1992, 1.02));
-    f_click.push_back(FeatureWeightInteger(1998, 1.24));
+    f_click.push_back(FeatureWeightInteger(1901, 1.42));
+    f_click.push_back(FeatureWeightInteger(1902, 1.02));
+    f_click.push_back(FeatureWeightInteger(1903, 1.24));
 
     auto &f_title = table.create_column<std::string>(F_TITLE);
     f_title.push_back(std::string("title1"));
@@ -272,13 +272,22 @@ int main() {
     print_feature("f_tag", f_tag);
 
     // 删除第1行
-    std::cout << "------- remove row 1 " << std::endl;
+    std::cout << "\n------ remove row 1 ------\n" << std::endl;
     table.remove_row(1);
 
     print_feature("f_uid", f_uid);
     print_feature("f_click", f_click);
     print_feature("f_title", f_title);
     print_feature("f_tag", f_tag);
+
+    // 删除第0行
+    std::cout << "\n------ remove row 0 ------\n" << std::endl;
+    table.remove_row(0);    
+
+    print_feature("f_uid", f_uid);
+    print_feature("f_click", f_click);
+    print_feature("f_title", f_title);
+    print_feature("f_tag", f_tag);    
 
     return 0;
 }
