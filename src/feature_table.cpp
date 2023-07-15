@@ -54,14 +54,17 @@ struct RemoveFunctor : VisitorBase<Ts ...>  {
     }
 };
 
+using IdxList = std::vector<int>;
+using IdxListPtr = std::shared_ptr<IdxList>;
+
 // 一种可以逻辑删除的数组容器，避免stl vector删除数据时发生大量移动和拷贝
 template<typename T>
 class DataVector {
 public:
     DataVector() {
-        idx_ = std::make_shared<std::vector<int>>();
+        idx_ = std::make_shared<IdxList>();
     }
-    DataVector(std::shared_ptr<std::vector<int>> idx) {
+    DataVector(IdxListPtr idx) {
         idx_ = std::move(idx);
     }
     DataVector(const DataVector& other) {
@@ -76,7 +79,7 @@ public:
         DataVector(other).swap(*this);
         return *this;
     }
-    void set_idx(std::shared_ptr<std::vector<int>> idx) {
+    void set_idx(IdxListPtr idx) {
         idx_ = std::move(idx);
     }
     void push_back(T value) {
@@ -95,7 +98,7 @@ public:
     size_t size() const { return idx_->size(); }
 private:
     std::vector<T> data_;
-    std::shared_ptr<std::vector<int>> idx_;
+    IdxListPtr idx_;
 };
 
 // 一种可以存储异构数据的vector容器，来源于：
@@ -117,7 +120,7 @@ public:
     }
 
     template<typename T>
-    DataVector<T>& get_or_create_vector(std::shared_ptr<std::vector<int>> &idx) {
+    DataVector<T>& get_or_create_vector(IdxListPtr &idx) {
         if (id_ >= items<T>.size()) {
             //std::cout << "Create New HeterogeneousVector id:" << id_ << std::endl;
             items<T>.resize(id_ + 1, nullptr);
@@ -170,10 +173,10 @@ std::vector<std::shared_ptr<DataVector<T>>> HeterogeneousVector::items;
 class FeatureTable {
 public:
     FeatureTable() {
-        idx_ = std::make_shared<std::vector<int>>();
+        idx_ = std::make_shared<IdxList>();
     }
     FeatureTable(size_t feature_size) : columns_(feature_size) {
-        idx_ = std::make_shared<std::vector<int>>();
+        idx_ = std::make_shared<IdxList>();
     }
 
     template<typename T>
@@ -205,7 +208,7 @@ public:
     }
 private:
     std::vector<std::shared_ptr<HeterogeneousVector>> columns_;
-    std::shared_ptr<std::vector<int>> idx_;
+    IdxListPtr idx_;
 };
 
 enum FeatureId {
