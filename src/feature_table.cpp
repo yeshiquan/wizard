@@ -137,7 +137,7 @@ public:
     const T& operator[](size_t i) const {
         size_t idx = idx_->list[i];
         return data_[idx];
-    }    
+    }
     T& at(size_t i) {
         size_t idx = idx_->list[i];
         return data_[idx];
@@ -146,6 +146,9 @@ public:
         size_t idx = idx_->list[i];
         return data_[idx];
     }
+    const T& get_by_idx(int idx) const {
+        return data_[idx];
+    }    
     void remove(size_t i) {
         idx_->list.erase(idx_->list.begin() + i);
     }
@@ -297,9 +300,9 @@ public:
 
     template<typename T, typename F>
     void sort_by(const std::string& column_name, F&& comp) {
-        const DataVector<T> &vec = get_column<T>(column_name);
-        std::sort(idx_->list.begin(), idx_->list.end(), [&comp](const T &a, const T &b) {
-            bool ret = comp(a, b);
+        const DataVector<T> &column = get_column<T>(column_name);
+        std::sort(idx_->list.begin(), idx_->list.end(), [&column, &comp](int idx1, int idx2) {
+            bool ret = comp(column.get_by_idx(idx1), column.get_by_idx(idx2));
             return ret;
         });
     }
@@ -343,7 +346,7 @@ int main() {
 
     auto &f_click = table.create_column<FeatureWeightInteger>("f_click");
     f_click.push_back(FeatureWeightInteger(1901, 1.41));
-    f_click.push_back(FeatureWeightInteger(1902, 1.42));
+    f_click.push_back(FeatureWeightInteger(1908, 1.48));
     f_click.push_back(FeatureWeightInteger(1903, 1.43));
 
     auto &f_title = table.create_column<std::string>("f_title");
@@ -375,9 +378,9 @@ int main() {
     }
 
     // 根据 f_uid 降序排列
-    std::cout << "\n------ order by f_uid DESC ------\n" << std::endl;
-    table.sort_by<int>("f_uid", [](const int &uid1, const int &uid2) {
-        return uid1 > uid2;
+    std::cout << "\n------ order by f_click.weight DESC ------\n" << std::endl;
+    table.sort_by<FeatureWeightInteger>("f_click", [](const FeatureWeightInteger &click1, const FeatureWeightInteger &click2) {
+        return click1.weight > click2.weight;
     });
     print_vector("f_uid", f_uid);
     print_vector("f_click", f_click);
