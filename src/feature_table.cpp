@@ -5,6 +5,8 @@
 #include <functional>
 #include <memory>
 #include <string_view>
+#include <queue>
+#include <algorithm>
 
 template<typename Container>
 void print_vector(std::string label, Container &arr) {
@@ -69,7 +71,23 @@ struct RemoveFunctor : VisitorBase<Ts ...>  {
     }
 };
 
-using IdxList = std::vector<int>;
+struct IdxList {
+    std::vector<int> list;
+    int max_idx = -1;
+    void add_idx(int new_idx) {
+        if (new_idx > max_idx) {
+            list.push_back(new_idx);
+            max_idx = new_idx;
+        }
+    }
+    void remove_row(int i) {
+        list.erase(list.begin() + i);
+        max_idx = -1;
+        for (auto idx : list) {
+            max_idx = std::max(max_idx, idx);
+        }
+    }
+};
 using IdxListPtr = std::shared_ptr<IdxList>;
 
 // 一种可以逻辑删除的数组容器，避免stl vector删除数据时发生大量移动和拷贝
@@ -99,45 +117,39 @@ public:
     }
     void push_back(T value) {
         int new_idx = data_.size();
-        //std::cout << "DataVector push_back() new_idx:" << new_idx << std::endl;
-        //print_vector("idx_", *idx_);
-        if (idx_->size() == 0 || new_idx > idx_->back()) {
-            idx_->push_back(new_idx);
-        }
+        idx_->add_idx(new_idx);
         data_.push_back(value);
     }
     template<typename ...Args>
     void emplace_back(Args && ... value) {
         int new_idx = data_.size();
-        if (idx_->size() == 0 || new_idx > idx_->back()) {
-            idx_->push_back(new_idx);
-        }
+        idx_->add_idx(new_idx);
         data_.emplace_back(std::forward<Args>(value)...);
     }
-    T& front() { return data_[idx_->front()]; }
-    const T& front() const { return data_[idx_->front()]; }    
-    T& back() { return data_[idx_->back()]; }
-    const T& back() const { return data_[idx_->back()]; }
+    T& front() { return data_[idx_->list.front()]; }
+    const T& front() const { return data_[idx_->list.front()]; }    
+    T& back() { return data_[idx_->list.back()]; }
+    const T& back() const { return data_[idx_->list.back()]; }
     T& operator[](size_t i) {
-        size_t idx = (*idx_)[i];
+        size_t idx = idx_->list[i];
         return data_[idx];
     }
     const T& operator[](size_t i) const {
-        size_t idx = (*idx_)[i];
+        size_t idx = idx_->list[i];
         return data_[idx];
     }    
     T& at(size_t i) {
-        size_t idx = (*idx_)[i];
+        size_t idx = idx_->list[i];
         return data_[idx];
     }
     const T& at(size_t i) const {
-        size_t idx = (*idx_)[i];
+        size_t idx = idx_->list[i];
         return data_[idx];
     }
     void remove(size_t i) {
-        idx_->erase(idx_->begin() + i);
+        idx_->list.erase(idx_->list.begin() + i);
     }
-    size_t size() const { return idx_->size(); }
+    size_t size() const { return idx_->list.size(); }
 private:
     std::vector<T> data_;
     IdxListPtr idx_;
@@ -212,7 +224,10 @@ private:
 template<class T>
 std::vector<std::shared_ptr<DataVector<T>>> HeterogeneousVector::items;
 
-// 一种列式存储的Table容器，支持行、列、数据的增删改查
+// 一种列式存储的Table容器
+// * 支持行、列、数据的增删改查
+// * 支持自定义过滤、排序
+// * 可以存储任意类型的数据，并且不需要提前定义数据类型，可以动态插入各种类型的数据
 // 典型应用场景是G侧的正排特征。
 class FeatureTable {
 public:
@@ -245,7 +260,7 @@ public:
     DataVector<T> &get_column(const std::string& column_name) {
         int column_id = get_column_id(column_name);
         return columns_[column_id]->get_vector<T>();
-    }    
+    }
 
     int ensure_column_id(const std::string &column_name) {
         auto iter = name_to_idx_.find(column_name);
@@ -275,18 +290,27 @@ public:
         const DataVector<T> &vec = get_column<T>(column_name);
         for (int i = 0; i < vec.size(); ++i) {
             if (is_filter(vec[i])) {
-                idx_->erase(idx_->begin() + i);
+                idx_->remove_row(i);
             }
         }
     }
 
-    void remove_row(int row) {
-        // 所有DataVector共享一份索引数据
-        // 删除一行数据变得如此简单、高效
-        idx_->erase(idx_->begin() + row);
+    template<typename T, typename F>
+    void sort_by(const std::string& column_name, F&& comp) {
+        const DataVector<T> &vec = get_column<T>(column_name);
+        std::sort(idx_->list.begin(), idx_->list.end(), [&comp](const T &a, const T &b) {
+            bool ret = comp(a, b);
+            return ret;
+        });
     }
 
-    size_t row_size() const { return idx_->size(); }
+    void remove_row(int row) {
+        // 所有DataVector共享一份索引数据
+        // 删除一行数据变得简单且高效
+        idx_->remove_row(row);
+    }
+
+    size_t row_size() const { return idx_->list.size(); }
 private:
     std::vector<std::shared_ptr<HeterogeneousVector>> columns_;
     IdxListPtr idx_;
@@ -350,8 +374,18 @@ int main() {
         std::cout << std::endl;
     }
 
+    // 根据 f_uid 降序排列
+    std::cout << "\n------ order by f_uid DESC ------\n" << std::endl;
+    table.sort_by<int>("f_uid", [](const int &uid1, const int &uid2) {
+        return uid1 > uid2;
+    });
+    print_vector("f_uid", f_uid);
+    print_vector("f_click", f_click);
+    print_vector("f_title", f_title);
+    print_vector("f_tag", f_tag);    
+
     // 删除第1行
-    std::cout << "\n------ remove row 1 ------\n" << std::endl;
+    std::cout << "\n------ remove row 1 (第2行) ------\n" << std::endl;
     table.remove_row(1);
 
     print_vector("f_uid", f_uid);
@@ -360,7 +394,7 @@ int main() {
     print_vector("f_tag", f_tag);
 
     // 删除第0行
-    std::cout << "\n------ remove row 0 ------\n" << std::endl;
+    std::cout << "\n------ remove row 0 (第1行) ------\n" << std::endl;
     table.remove_row(0);
 
     print_vector("f_uid", f_uid);
@@ -381,9 +415,9 @@ int main() {
     print_vector("f_tag", f_tag);
 
     // 根据 f_click 过滤数据
-    std::cout << "\n------ filter where f_click.weight < 1.44 ------\n" << std::endl;
+    std::cout << "\n------ filter where f_click.weight < 1.42 ------\n" << std::endl;
     table.filter<FeatureWeightInteger>("f_click", [](const FeatureWeightInteger &f_click) {
-        return f_click.weight < 1.44;
+        return f_click.weight < 1.42;
     });
 
     print_vector("f_uid", f_uid);
